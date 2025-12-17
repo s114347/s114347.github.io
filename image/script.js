@@ -135,7 +135,7 @@ function update() {
 function resetBall() {
     ball.x = canvas.width / 2 - BALL_SIZE / 2;
     ball.y = canvas.height / 2 - BALL_SIZE / 2;
-    ball.speed = 5;
+    //    ///    /   
     
     // 隨機發球方向
     const directionX = Math.random() < 0.5 ? -1 : 1;
