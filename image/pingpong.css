@@ -1,0 +1,36 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #2c3e50; /* 深藍灰色背景 */
+    font-family: sans-serif;
+    color: white;
+}
+
+.game-container {
+    text-align: center;
+    border: 5px solid #ecf0f1; /* 邊框 */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    background-color: #1a252f; /* 遊戲區域背景 */
+    padding: 10px;
+    border-radius: 8px;
+}
+
+#pingPongCanvas {
+    background-color: #000; /* 畫布背景色為黑色 */
+    display: block; /* 移除畫布下方的空白 */
+    cursor: pointer;
+}
+
+#score {
+    font-size: 1.5em;
+    margin: 10px 0;
+    color: #f1c40f; /* 亮黃色分數 */
+}
+
+#status {
+    font-size: 1.2em;
+    color: #3498db; /* 亮藍色狀態 */
+}
