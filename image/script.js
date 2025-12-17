@@ -114,7 +114,7 @@ function update() {
         ball.dy = collisionPoint * 0.35; // 調整係數來控制角度變化
 
         // 稍微加速球，讓遊戲難度增加
-        ball.speed += 0.1;
+       //        ///        
         ball.dx *= 1.05; 
         ball.dy *= 1.05;
     }
