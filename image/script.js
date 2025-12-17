@@ -100,7 +100,7 @@ function update() {
     // 處理球拍碰撞
     let paddle = (ball.x < canvas.width / 2) ? player : computer;
 
-    if (
+    if (//
         ball.x + BALL_SIZE > paddle.x &&
         ball.x < paddle.x + PADDLE_WIDTH &&
         ball.y + BALL_SIZE > paddle.y &&
