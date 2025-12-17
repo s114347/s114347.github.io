@@ -148,9 +148,12 @@ function resetBall() {
     if (player.score >= WINNING_SCORE || computer.score >= WINNING_SCORE) {
         endGame();
     } else {
-        // 暫停一下，讓玩家準備
+        // *** 這裡新增了關鍵的一行 ***
         gameRunning = false;
         statusElement.textContent = `得分! ${player.score} : ${computer.score}。點擊繼續...`;
+        
+        // 讓玩家能夠點擊畫布來呼叫 startGame() 函數，繼續遊戲
+        canvas.onclick = startGame; 
     }
 }
 
