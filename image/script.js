@@ -32,7 +32,7 @@ let ball = {
     y: canvas.height / 2,
     dx: 5, // 水平移動速度
     dy: 5, // 垂直移動速度
-    speed: 5
+    const base speed: 5
 };
 
 let gameRunning = false;
@@ -56,7 +56,7 @@ function drawCircle(x, y, r, color) {
 
 function draw() {
     // 清空畫布 (黑色)
-    drawRect(0, 0, canvas.width, canvas.height, 'black');
+    drawRect(0, 0, canvas.width, canvas.height, 'dark blue');
 
     // 繪製中線 (虛線)
     for (let i = 0; i < canvas.height; i += 30) {
@@ -64,9 +64,9 @@ function draw() {
     }
 
     // 繪製球拍和球
-    drawRect(player.x, player.y, PADDLE_WIDTH, PADDLE_HEIGHT, 'white'); // 玩家球拍
-    drawRect(computer.x, computer.y, PADDLE_WIDTH, PADDLE_HEIGHT, 'white'); // 電腦球拍
-    drawCircle(ball.x, ball.y, BALL_SIZE, 'white'); // 球
+    drawRect(player.x, player.y, PADDLE_WIDTH, PADDLE_HEIGHT, 'red'); // 玩家球拍
+    drawRect(computer.x, computer.y, PADDLE_WIDTH, PADDLE_HEIGHT, 'red'); // 電腦球拍
+    drawCircle(ball.x, ball.y, BALL_SIZE, 'orange'); // 球
 }
 
 // 2. 更新球和球拍的位置
@@ -100,7 +100,7 @@ function update() {
     // 處理球拍碰撞
     let paddle = (ball.x < canvas.width / 2) ? player : computer;
 
-    if (//
+    if (
         ball.x + BALL_SIZE > paddle.x &&
         ball.x < paddle.x + PADDLE_WIDTH &&
         ball.y + BALL_SIZE > paddle.y &&
@@ -113,9 +113,7 @@ function update() {
         const collisionPoint = ball.y + BALL_SIZE / 2 - (paddle.y + PADDLE_HEIGHT / 2);
         ball.dy = collisionPoint * 0.35; // 調整係數來控制角度變化
 
-        // 稍微加速球，讓遊戲難度增加
-       //        ///        
-        
+       
     }
 
     // 球出界 (得分)
