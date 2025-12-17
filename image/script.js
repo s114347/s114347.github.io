@@ -66,7 +66,7 @@ function draw() {
     // 繪製球拍和球
     drawRect(player.x, player.y, PADDLE_WIDTH, PADDLE_HEIGHT, 'white'); // 玩家球拍
     drawRect(computer.x, computer.y, PADDLE_WIDTH, PADDLE_HEIGHT, 'white'); // 電腦球拍
-    drawCircle(ball.x, ball.y, BALL_SIZE, 'red'); // 球
+    drawCircle(ball.x, ball.y, BALL_SIZE, 'white'); // 球
 }
 
 // 2. 更新球和球拍的位置
