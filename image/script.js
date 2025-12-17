@@ -21,7 +21,7 @@ let player = {
 };
 
 let computer = {
-    x: canvas.width - PADDEL_WIDTH,
+    x: canvas.width - PADDLE_WIDTH,
     y: canvas.height / 2 - PADDLE_HEIGHT / 2,
     score: 0,
     dy: 0
