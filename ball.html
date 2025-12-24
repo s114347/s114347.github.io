@@ -1,0 +1,72 @@
+import tkinter as tk
+import random
+
+class PongGame:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("經典桌球遊戲 - 固定速度版")
+        
+        # 遊戲設定
+        self.width = 600
+        self.height = 400
+        self.canvas = tk.Canvas(self.root, width=self.width, height=self.height, bg="black")
+        self.canvas.pack()
+
+        # 球的速度 (固定值)
+        self.ball_speed_x = 4
+        self.ball_speed_y = 4
+        
+        # 初始化物件
+        self.paddle = self.canvas.create_rectangle(250, 380, 350, 390, fill="white")
+        self.ball = self.canvas.create_oval(290, 190, 310, 210, fill="yellow")
+        
+        # 分數
+        self.score = 0
+        self.score_text = self.canvas.create_text(50, 20, text=f"Score: {self.score}", fill="white", font=("Arial", 14))
+
+        # 控制變數
+        self.dx = self.ball_speed_x
+        self.dy = -self.ball_speed_y
+        
+        # 綁定滑鼠移動
+        self.canvas.bind_all('<Motion>', self.move_paddle)
+        
+        self.play_game()
+
+    def move_paddle(self, event):
+        # 讓球拍跟隨滑鼠水平移動
+        x = event.x
+        self.canvas.coords(self.paddle, x - 50, 380, x + 50, 390)
+
+    def play_game(self):
+        # 移動球
+        self.canvas.move(self.ball, self.dx, self.dy)
+        pos = self.canvas.coords(self.ball)
+
+        # 碰到左右牆壁反彈
+        if pos[0] <= 0 or pos[2] >= self.width:
+            self.dx = -self.dx
+            
+        # 碰到上方牆壁反彈
+        if pos[1] <= 0:
+            self.dy = -self.dy
+
+        # 判定是否碰到球拍
+        paddle_pos = self.canvas.coords(self.paddle)
+        if pos[2] >= paddle_pos[0] and pos[0] <= paddle_pos[2]:
+            if pos[3] >= paddle_pos[1] and pos[3] <= paddle_pos[3]:
+                self.dy = -self.ball_speed_y # 保持固定向上速度
+                self.score += 1
+                self.canvas.itemconfig(self.score_text, text=f"Score: {self.score}")
+
+        # 判定遊戲結束 (球掉到下方)
+        if pos[3] >= self.height:
+            self.canvas.create_text(300, 200, text="GAME OVER", fill="red", font=("Arial", 30))
+        else:
+            # 每 10 毫秒更新一次畫面
+            self.root.after(10, self.play_game)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = PongGame(root)
+    root.mainloop()
