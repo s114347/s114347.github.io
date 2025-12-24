@@ -2,102 +2,235 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>經典貪食蛇 - 網頁版</title>
+    <title>貪食蛇遊戲</title>
     <style>
+        :root {
+            /* 和諧森林色系（低對比、不刺眼） */
+            --bg:#22241f;            /* 深森林背景 */
+            --panel:#2a2d26;         /* 面板深綠灰 */
+            --accent:#9fd39a;        /* 柔和嫩綠 */
+            --accent-2:#d9c48f;      /* 枯葉米黃 */
+        }
+        *{box-sizing:border-box}
         body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #2c3e50;
-            color: white;
-            font-family: 'Arial', sans-serif;
+            background: radial-gradient(1200px 600px at 50% -20%, #2f332b, var(--bg));
+            color: #eef2ea;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            text-align: center;
+            margin: 0; padding: 24px;
         }
+        .app {
+            max-width: 520px; margin: 0 auto; padding: 16px 16px 20px;
+            background: linear-gradient(180deg, #2f332b, var(--panel));
+            border-radius: 18px;
+            box-shadow: 0 18px 36px rgba(0,0,0,.35);
+            border: 1px solid rgba(255,255,255,.06);
+        }
+        h1{margin: 8px 0 12px; letter-spacing:.5px}
+        .hud{
+            display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap;
+            background: rgba(0,0,0,.22);
+            border-radius:14px; padding:10px 12px;
+            border:1px solid rgba(255,255,255,.08)
+        }
+        .badge{
+            padding:6px 12px; border-radius:999px; font-weight:600; font-size:14px;
+            background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.04));
+            border:1px solid rgba(255,255,255,.10)
+        }
+        .badge.score{color:#eaffea}
+        .badge.best{color:#fff6da}
+        .controls{display:flex; gap:10px; justify-content:center; margin:10px 0}
+        button {
+            padding: 10px 16px; font-size: 14px; font-weight:700; cursor: pointer;
+            color:#1f2a1f;
+            background: linear-gradient(180deg, var(--accent), #86b983);
+            border:none; border-radius:12px;
+            box-shadow: 0 5px 0 #5f8f5c;
+        }
+        button.secondary{
+            background: linear-gradient(180deg, var(--accent-2), #c3ae78);
+            box-shadow: 0 5px 0 #9e8a56;
+            color:#3a3322
+        }
+        button:active{transform: translateY(2px); box-shadow: 0 4px 0 rgba(0,0,0,.35)}
         canvas {
-            border: 10px solid #34495e;
-            background-color: #000;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            /* 枯葉堆之間＝蛇的軌道（與 20px 格子對齊） */
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%233b2414'/><rect x='1' y='1' width='18' height='18' fill='none' stroke='%23512f1a' stroke-width='2' opacity='0.9'/><ellipse cx='5' cy='6' rx='3' ry='2' fill='%238b5a2b'/><ellipse cx='15' cy='14' rx='3' ry='2' fill='%239c6b3f'/></svg>");
+            background-repeat: repeat;
+            image-rendering: crisp-edges;
+            display: block; margin: 14px auto 8px;
+            border-radius: 16px; border: 2px solid rgba(255,255,255,.6);
+            box-shadow: inset 0 0 0 2px rgba(0,0,0,.25), 0 18px 30px rgba(0,0,0,.35);
         }
-        .score-board {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-        .controls {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #bdc3c7;
-        }
+        .hint{opacity:.85; font-size:13px; margin-top:6px}
     </style>
 </head>
 <body>
+    <h1>🐍 貪食蛇遊戲</h1>
 
-    <div class="score-board">分數: <span id="score">0</span></div>
-    <canvas id="snakeCanvas" width="400" height="400"></canvas>
-    <div class="controls">使用方向鍵 (↑ ↓ ← →) 控制移動</div>
+    <!-- 開始畫面遮罩 -->
+    <div id="startScreen" style="position:relative;">
+        <canvas id="game" width="400" height="400"></canvas>
+        <div id="startOverlay" style="position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; background:rgba(0,0,0,.55); border-radius:16px;">
+            <h2 style="margin-bottom:16px;">開始遊戲</h2>
+            <button onclick="startGame()">▶ 開始</button>
+        </div>
+    </div>
+
+    <div id="score">分數：0</div>
+    <div id="best">最高分：0</div>
+    <div class="controls">
+        <button onclick="restartGame()">重新開始</button>
+        <button class="secondary" onclick="togglePause()">暫停 / 繼續</button>
+    </div>
+    <p>方向鍵移動，空白鍵暫停</p> ⬆ ⬇ ⬅ ⮕ 鍵控制方向</p>
 
     <script>
-        const canvas = document.getElementById("snakeCanvas");
+        const canvas = document.getElementById("game");
         const ctx = canvas.getContext("2d");
-        const scoreElement = document.getElementById("score");
+        const box = 20;
+        let score, bestScore, snake, direction, food, game;
+        let isPaused = false;
+        let isStarted = false;
 
-        const gridSize = 20; // 每個格子的尺寸
-        const tileCount = canvas.width / gridSize; // 一列有幾個格子
+        // 逼真蛇頭（眼睛 + 陰影）
+        const headImg = new Image();
+        headImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><defs><radialGradient id='h' cx='30%' cy='30%' r='70%'><stop offset='0%' stop-color='%23b6ff9f'/><stop offset='100%' stop-color='%232f7f2f'/></radialGradient></defs><ellipse cx='10' cy='10' rx='9' ry='8' fill='url(%23h)' stroke='%23003300' stroke-width='1'/><ellipse cx='7' cy='8' rx='2.2' ry='2.8' fill='white'/><ellipse cx='13' cy='8' rx='2.2' ry='2.8' fill='white'/><circle cx='7.6' cy='9' r='1.2' fill='black'/><circle cx='13.6' cy='9' r='1.2' fill='black'/><path d='M6 13 Q10 16 14 13' stroke='%23002200' stroke-width='1.2' fill='none'/></svg>";
 
-        let score = 0;
-        let snake = [{x: 10, y: 10}]; // 蛇的初始位置
-        let food = {x: 5, y: 5};
-        let dx = 0; // 水平速度
-        let dy = 0; // 垂直速度
+        // 逼真蛇身（鱗片感）
+        const bodyImg = new Image();
+        bodyImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><defs><linearGradient id='b' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='%2355aa55'/><stop offset='100%' stop-color='%232f6b2f'/></linearGradient></defs><rect width='20' height='20' rx='6' ry='6' fill='url(%23b)'/><path d='M0 10 Q5 6 10 10 T20 10' stroke='rgba(255,255,255,0.2)' fill='none'/></svg>";
 
-        // 遊戲速度設定 (毫秒，數字越大越慢，這裡設為 100ms 固定速度)
-        const gameSpeed = 100;
+        // 老鼠（維持可愛）
+        const mouseImg = new Image();
+        mouseImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><defs><radialGradient id='mg' cx='40%' cy='30%' r='70%'><stop offset='0%' stop-color='%23f2f2f2'/><stop offset='100%' stop-color='%23888888'/></radialGradient></defs><ellipse cx='10' cy='11' rx='7.5' ry='6.5' fill='url(%23mg)' stroke='%23666666' stroke-width='1'/><circle cx='5' cy='6' r='3' fill='%23bbbbbb'/><circle cx='15' cy='6' r='3' fill='%23bbbbbb'/><circle cx='8' cy='10' r='1' fill='black'/><circle cx='12' cy='10' r='1' fill='black'/><circle cx='10' cy='12' r='1.2' fill='pink'/></svg>";
 
-        // 監聽鍵盤
-        document.addEventListener("keydown", changeDirection);
+        const eatSound = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAAA=");
+        const dieSound = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAAA=");
 
-        function main() {
-            if (didGameEnd()) {
-                alert("遊戲結束！你的分數是: " + score);
-                resetGame();
-            }
+        document.addEventListener("keydown", e => {
+            if (e.key === " ") togglePause();
+            if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+            if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+            if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+            if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+        });
 
-            setTimeout(function onTick() {
-                clearCanvas();
-                drawFood();
-                advanceSnake();
-                drawSnake();
-                main();
-            }, gameSpeed);
+        function init() {
+            isStarted = true;
+            document.getElementById("startOverlay").style.display = "none";
+            score = 0;
+            direction = "";
+            snake = [{ x: 9 * box, y: 10 * box }];
+            food = randomFood();
+            bestScore = localStorage.getItem("bestScore") || 0;
+            document.getElementById("score").innerText = "分數：0";
+            document.getElementById("best").innerText = "最高分：" + bestScore;
+            clearInterval(game);
+            game = setInterval(draw, 120);
         }
 
-        function clearCanvas() {
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function startGame() {
+            if (!isStarted) init();
         }
 
-        function drawSnake() {
-            ctx.fillStyle = "#2ecc71";
-            ctx.strokeStyle = "#27ae60";
-            snake.forEach(part => {
-                ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
-                ctx.strokeRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
-            });
+        function restartGame() {
+            isPaused = false;
+            init();
         }
-
-        function advanceSnake() {
-            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
-            snake.unshift(head);
-
-            // 檢查是否吃到食物
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
-                scoreElement.innerHTML = score;
-                createFood();
+        function togglePause() {
+            if (isPaused) {
+                game = setInterval(draw, 120);
+                isPaused = false;
             } else {
-                snake.pop(); // 沒吃到食物就移除尾巴，保持長度
+                clearInterval(game);
+                isPaused = true;
+                drawPauseText();
             }
         }
+        function drawDeathSpotlight(head) {
+            // 先鋪一層「半透明暗幕」
+            ctx.save();
+            ctx.fillStyle = "rgba(0,0,0,0.45)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        function didGame
+            // 在蛇頭那一格畫出「亮區」，但不使用 destination-out
+            const cx = head.x + box / 2;
+            const cy = head.y + box / 2;
+            const r = box * 1.2;
+
+            const gradient = ctx.createRadialGradient(cx, cy, box * 0.1, cx, cy, r);
+            gradient.addColorStop(0, "rgba(255,255,255,0.75)");
+            gradient.addColorStop(1, "rgba(255,255,255,0.0)");
+
+            ctx.globalCompositeOperation = "lighter";
+            ctx.fillStyle = gradient;
+            ctx.fillRect(head.x - box, head.y - box, box * 3, box * 3);
+            ctx.globalCompositeOperation = "source-over";
+            ctx.restore();
+        }
+
+        function drawPauseText() {
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "white";
+            ctx.font = "30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("⏸ 暫停中", canvas.width / 2, canvas.height / 2);
+        }
+
+        function randomFood() { return { x: Math.floor(Math.random() * 19) * box, y: Math.floor(Math.random() * 19) * box }; }
+        function collision(head, body) { return body.some(p => p.x === head.x && p.y === head.y); }
+
+        function draw() {
+            if (!isStarted || isPaused) return;
+            if (isPaused) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            snake.forEach((part, i) => {
+                if (i === 0) ctx.drawImage(headImg, part.x, part.y, box, box);
+                else ctx.drawImage(bodyImg, part.x, part.y, box, box);
+            });
+
+            ctx.drawImage(mouseImg, food.x, food.y, box, box);
+
+            let { x: headX, y: headY } = snake[0];
+            if (direction === "LEFT") headX -= box;
+            if (direction === "UP") headY -= box;
+            if (direction === "RIGHT") headX += box;
+            if (direction === "DOWN") headY += box;
+
+            if (headX === food.x && headY === food.y) {
+                score++; eatSound.play();
+                document.getElementById("score").innerText = "分數：" + score;
+                food = randomFood();
+            } else snake.pop();
+
+            const newHead = { x: headX, y: headY };
+            if (headX < 0 || headY < 0 || headX >= canvas.width || headY >= canvas.height || collision(newHead, snake)) {
+                clearInterval(game);
+                dieSound.play();
+                if (score > bestScore) localStorage.setItem("bestScore", score);
+
+                // 保留蛇在死亡前的位置（不移動、不消失）
+                snake.unshift(newHead);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                snake.forEach((part, i) => {
+                    if (i === 0) ctx.drawImage(headImg, part.x, part.y, box, box);
+                    else ctx.drawImage(bodyImg, part.x, part.y, box, box);
+                });
+
+                drawDeathSpotlight(newHead);
+                // 設為未開始狀態，畫面保持在死亡瞬間
+                isStarted = false;
+                return;
+            }
+            snake.unshift(newHead);
+        }
+        // 預設停在開始畫面，不自動開始
+        // init();
+    </script>
+</body>
+</html>
+
