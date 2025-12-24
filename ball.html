@@ -1,72 +1,96 @@
-import tkinter as tk
-import random
+import pygame
+import sys
 
-class PongGame:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("經典桌球遊戲 - 固定速度版")
-        
-        # 遊戲設定
-        self.width = 600
-        self.height = 400
-        self.canvas = tk.Canvas(self.root, width=self.width, height=self.height, bg="black")
-        self.canvas.pack()
+# 初始化
+pygame.init()
 
-        # 球的速度 (固定值)
-        self.ball_speed_x = 4
-        self.ball_speed_y = 4
-        
-        # 初始化物件
-        self.paddle = self.canvas.create_rectangle(250, 380, 350, 390, fill="white")
-        self.ball = self.canvas.create_oval(290, 190, 310, 210, fill="yellow")
-        
-        # 分數
-        self.score = 0
-        self.score_text = self.canvas.create_text(50, 20, text=f"Score: {self.score}", fill="white", font=("Arial", 14))
+# 顏色與視窗設定
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("單人桌球 vs AI (固定速度版)")
 
-        # 控制變數
-        self.dx = self.ball_speed_x
-        self.dy = -self.ball_speed_y
-        
-        # 綁定滑鼠移動
-        self.canvas.bind_all('<Motion>', self.move_paddle)
-        
-        self.play_game()
+# 常數設定
+PADDLE_WIDTH, PADDLE_HEIGHT = 10, 100
+BALL_SIZE = 15
+BALL_SPEED = 6    # 固定球速
+PLAYER_SPEED = 7  # 玩家移動速度
+AI_SPEED = 5      # AI 移動速度 (稍微調慢一點，玩家才有機會贏)
 
-    def move_paddle(self, event):
-        # 讓球拍跟隨滑鼠水平移動
-        x = event.x
-        self.canvas.coords(self.paddle, x - 50, 380, x + 50, 390)
+# 遊戲物件
+player_paddle = pygame.Rect(20, HEIGHT//2 - PADDLE_HEIGHT//2, PADDLE_WIDTH, PADDLE_HEIGHT)
+ai_paddle = pygame.Rect(WIDTH - 30, HEIGHT//2 - PADDLE_HEIGHT//2, PADDLE_WIDTH, PADDLE_HEIGHT)
+ball = pygame.Rect(WIDTH//2, HEIGHT//2, BALL_SIZE, BALL_SIZE)
 
-    def play_game(self):
-        # 移動球
-        self.canvas.move(self.ball, self.dx, self.dy)
-        pos = self.canvas.coords(self.ball)
+ball_dx = BALL_SPEED
+ball_dy = BALL_SPEED
 
-        # 碰到左右牆壁反彈
-        if pos[0] <= 0 or pos[2] >= self.width:
-            self.dx = -self.dx
-            
-        # 碰到上方牆壁反彈
-        if pos[1] <= 0:
-            self.dy = -self.dy
+# 分數
+player_score = 0
+ai_score = 0
+font = pygame.font.SysFont("Arial", 32)
 
-        # 判定是否碰到球拍
-        paddle_pos = self.canvas.coords(self.paddle)
-        if pos[2] >= paddle_pos[0] and pos[0] <= paddle_pos[2]:
-            if pos[3] >= paddle_pos[1] and pos[3] <= paddle_pos[3]:
-                self.dy = -self.ball_speed_y # 保持固定向上速度
-                self.score += 1
-                self.canvas.itemconfig(self.score_text, text=f"Score: {self.score}")
+clock = pygame.time.Clock()
 
-        # 判定遊戲結束 (球掉到下方)
-        if pos[3] >= self.height:
-            self.canvas.create_text(300, 200, text="GAME OVER", fill="red", font=("Arial", 30))
-        else:
-            # 每 10 毫秒更新一次畫面
-            self.root.after(10, self.play_game)
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    game = PongGame(root)
-    root.mainloop()
+    # 1. 玩家控制 (左側)
+    keys = pygame.key.get_pressed()
+    if (keys[pygame.K_w] or keys[pygame.K_UP]) and player_paddle.top > 0:
+        player_paddle.y -= PLAYER_SPEED
+    if (keys[pygame.K_s] or keys[pygame.K_DOWN]) and player_paddle.bottom < HEIGHT:
+        player_paddle.y += PLAYER_SPEED
+
+    # 2. AI 邏輯 (右側)
+    # AI 會判斷球的高度與自己中心點的距離
+    if ai_paddle.centerY < ball.centerY:
+        ai_paddle.y += AI_SPEED
+    elif ai_paddle.centerY > ball.centerY:
+        ai_paddle.y -= AI_SPEED
+    
+    # 確保 AI 不會超出螢幕
+    if ai_paddle.top < 0: ai_paddle.top = 0
+    if ai_paddle.bottom > HEIGHT: ai_paddle.bottom = HEIGHT
+
+    # 3. 球的移動
+    ball.x += ball_dx
+    ball.y += ball_dy
+
+    # 4. 碰撞邏輯
+    # 頂部/底部反彈
+    if ball.top <= 0 or ball.bottom >= HEIGHT:
+        ball_dy *= -1
+
+    # 擋板碰撞
+    if ball.colliderect(player_paddle) or ball.colliderect(ai_paddle):
+        ball_dx *= -1
+        # 這裡不增加速度，確保符合你的要求
+
+    # 5. 計分與重置
+    if ball.left <= 0:
+        ai_score += 1
+        ball.center = (WIDTH//2, HEIGHT//2)
+        ball_dx = BALL_SPEED # 重置方向
+    if ball.right >= WIDTH:
+        player_score += 1
+        ball.center = (WIDTH//2, HEIGHT//2)
+        ball_dx = -BALL_SPEED
+
+    # 6. 繪製畫面
+    screen.fill(BLACK)
+    pygame.draw.rect(screen, WHITE, player_paddle)
+    pygame.draw.rect(screen, WHITE, ai_paddle)
+    pygame.draw.ellipse(screen, WHITE, ball)
+    pygame.draw.aaline(screen, WHITE, (WIDTH//2, 0), (WIDTH//2, HEIGHT))
+
+    # 顯示分數
+    score_display = font.render(f"You: {player_score}   AI: {ai_score}", True, WHITE)
+    screen.blit(score_display, (WIDTH//2 - 100, 20))
+
+    pygame.display.flip()
+    clock.tick(60)
